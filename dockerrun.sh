@@ -6,4 +6,4 @@
 
 #gcc flaskehals.c -o flaskehals -static
 docker build -t $1/nodeserver .
-docker run -v database:/database/ -p 8888:8888 --rm --name nodeserver -it $1/nodeserver /bin/sh
+docker run -v database:/database/ -p 8888:8888 --rm --name nodeserver --network=mynet -it $1/nodeserver /bin/sh
