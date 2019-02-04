@@ -5,9 +5,11 @@
 //npm install express, sqlite3, xmlbuilder --save
 const express = require('express')
 const sqlite3 = require('sqlite3').verbose();
-const builder = require('xmlbuilder');
+var builder = require('xmlbuilder');
 const app = express()
 const port = 8888
+var node = require("deasync");
+node.loop = node.runLoopOnce;
 let db = new sqlite3.Database('./database', sqlite3.OPEN_READWRITE, (err) => {
 if (err){
 	console.error(err.message);
@@ -16,41 +18,44 @@ console.log('DB connected');
 });
 
 app.get('/forfatter/',function (req,res) {
-	/*
-	db.serialize(function() {
-	let sql = 'SELECT fornavn as fornavn FROM forfatter';
-	db.each(sql, (err, rows) => {
-	if (err) {
-    		throw err;
- 	}
-    	send(rows.fornavn);
-  	});
-	});
-	*/
-	var xml = builder.create('root').ele('forfatter','hei').end({pretty:true});
+	res.set('Content-Type', 'text/xml');
+
+    	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
+    	xmlFile += '<forfatterliste>';
+	var done = 0;	
 
 	let sql = `SELECT * FROM forfatter
            ORDER BY forfatterID`;
  	
-	db.all(sql, [], (err, rows) => {
- 	if (err) {
-    		throw err;
-  	}
+	db.serialize(function() {
+		db.all(sql, [], (err, rows) => {
+ 			if (err) {
+    				throw err;
+  			}
+	
+			var xml = builder.create('forfatterliste');
+  			rows.forEach((row) => {
+				xmlFile += '<forfatter>';
+              			xmlFile += '<forfatterid>' + row.forfatterID + '</forfatterid>';
+                		xmlFile += '<fornavn>' + row.fornavn + '</fornavn>';
+                		xmlFile += '<etternavn>' + row.etternavn + '</etternavn>';
+                		xmlFile += '<nasjonalitet>' + row.nasjonalitet + '</nasjonalitet>'
+                		xmlFile += '</forfatter>';
+           		 });		
+		done = 1;
+		});
+		while(!done) {
+        		node.loop();
+        	}
 
-  	rows.forEach((row) => {
-	//xml.ele('forfatter',row.forfatterID)
-	//forfatter.ele('fornavn',row.fornavn);
-	//forfatter.ele('etternavn',row.etternavn);
-    			
-	//console.log(row.forfatterID,row.etternavn,row.fornavn,row.nasjonalitet);
-  	});
-	res.send(xml);
+        	xmlFile += '</forfatterliste>';
+        	res.send(xmlFile);
 	});
 });
 
-
-app.get('/forfatter/01',function (req,res) {
-	res.send('forfatter 01' )
+app.get('/forfatter/:forfatterid',function (req,res) {
+	res.send(req.param("forfatterid"));
+	res.send('du ba om:' forfatterid); 
 	
 });
 
