@@ -19,8 +19,9 @@ console.log('DB connected');
 
 app.get('/forfatter/',function (req,res) {
 	res.set('Content-Type', 'text/xml');
-
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
+	xmlFile = '<!DOCTYPE note SYSTEM "http://bp/forfatter.dtd">'
+
     	xmlFile += '<forfatterliste>';
 	var done = 0;	
 
@@ -53,11 +54,114 @@ app.get('/forfatter/',function (req,res) {
 	});
 });
 
-app.get('/forfatter/:forfatterid',function (req,res) {
-	res.send(req.param("forfatterid"));
-	res.send('du ba om:' forfatterid); 
+app.get('/forfatter/:forfatterId',function (req,res) {
+	var Id = req.param('forfatterId');
+	console.log('ForfatterID: ' + Id);
+	res.set('Content-Type', 'text/xml');
+    	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
+    	xmlFile += '<forfatterliste>';
+	var done = 0;	
+
+	let sql = `SELECT * FROM forfatter WHERE forfatterID=?
+           ORDER BY forfatterID`;
+ 	
+	db.serialize(function() {
+		db.all(sql, [Id], (err, rows) => {
+ 			if (err) {
+    				throw err;
+  			}
 	
+			var xml = builder.create('forfatterliste');
+  			rows.forEach((row) => {
+				xmlFile += '<forfatter>';
+              			xmlFile += '<forfatterid>' + row.forfatterID + '</forfatterid>';
+                		xmlFile += '<fornavn>' + row.fornavn + '</fornavn>';
+                		xmlFile += '<etternavn>' + row.etternavn + '</etternavn>';
+                		xmlFile += '<nasjonalitet>' + row.nasjonalitet + '</nasjonalitet>'
+                		xmlFile += '</forfatter>';
+           		 });		
+		done = 1;
+		});
+		while(!done) {
+        		node.loop();
+        	}
+
+        	xmlFile += '</forfatterliste>';
+        	res.send(xmlFile);
+
+		});
 });
+
+
+app.get('/bok/',function (req,res) {
+	res.set('Content-Type', 'text/xml');
+    	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
+    	xmlFile += '<bokliste>';
+	var done = 0;	
+
+	let sql = `SELECT * FROM bok ORDER BY bokID`;
+ 	
+	db.serialize(function() {
+		db.all(sql, [], (err, rows) => {
+ 			if (err) {
+    				throw err;
+  			}
+	
+			var xml = builder.create('forfatterliste');
+  			rows.forEach((row) => {
+				xmlFile += '<bok>';
+              			xmlFile += '<bokid>' + row.bokID + '</bokid>';
+                		xmlFile += '<tittel>' + row.tittel + '</tittel>';
+                		xmlFile += '<forfatterid>' + row.forfatterID + '</forfatterid>';
+                		xmlFile += '</bok>';
+           		 });		
+		done = 1;
+		});
+		while(!done) {
+        		node.loop();
+        	}
+
+        	xmlFile += '</bokliste>';
+        	res.send(xmlFile);
+	});
+});
+
+app.get('/bok/:bokId',function (req,res) {
+	var Id = req.param('bokId');
+	console.log('Bok id: ' + Id);
+	res.set('Content-Type', 'text/xml');
+    	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
+    	xmlFile += '<bokliste>';
+	var done = 0;	
+
+	let sql = `SELECT * FROM bok WHERE bokID=? ORDER BY bokID`;
+ 	
+	db.serialize(function() {
+		db.all(sql, [Id], (err, rows) => {
+ 			if (err) {
+    				throw err;
+  			}
+	
+			var xml = builder.create('bokliste');
+  			rows.forEach((row) => {
+				xmlFile += '<bok>';
+              			xmlFile += '<bokid>' + row.bokID + '</bokid>';
+                		xmlFile += '<tittel>' + row.tittel + '</tittel>';
+                		xmlFile += '<forfatterid>' + row.forfatterID + '</forfatterid>';
+                		xmlFile += '</bok>';
+           		 });		
+		done = 1;
+		});
+		while(!done) {
+        		node.loop();
+        	}
+
+        	xmlFile += '</bokliste>';
+        	res.send(xmlFile);
+
+		});
+});
+
 
 
 app.post('/',function (req,res) {
