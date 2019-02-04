@@ -3,12 +3,15 @@
 //http://www.sqlitetutorial.net/sqlite-nodejs/query/
 //https://www.npmjs.com/package/xmlbuilder
 //npm install express, sqlite3, xmlbuilder --save
-const express = require('express')
+const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 var builder = require('xmlbuilder');
-const app = express()
-const port = 8888
+const app = express();
+const port = 8888;
 var node = require("deasync");
+var bodyParser = require("body-parser");
+require('body-parser-xml')(bodyParser); 
+app.use(bodyParser.xml());
 node.loop = node.runLoopOnce;
 let db = new sqlite3.Database('./database', sqlite3.OPEN_READWRITE, (err) => {
 if (err){
@@ -20,7 +23,7 @@ console.log('DB connected');
 app.get('/forfatter/',function (req,res) {
 	res.set('Content-Type', 'text/xml');
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
-	xmlFile = '<!DOCTYPE note SYSTEM "http://bp/forfatter.dtd">'
+	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/forfatter.dtd">'
 
     	xmlFile += '<forfatterliste>';
 	var done = 0;	
@@ -59,6 +62,7 @@ app.get('/forfatter/:forfatterId',function (req,res) {
 	console.log('ForfatterID: ' + Id);
 	res.set('Content-Type', 'text/xml');
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
+	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/forfatter.dtd">'
     	xmlFile += '<forfatterliste>';
 	var done = 0;	
 
@@ -96,6 +100,7 @@ app.get('/forfatter/:forfatterId',function (req,res) {
 app.get('/bok/',function (req,res) {
 	res.set('Content-Type', 'text/xml');
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
+	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/bok.dtd">'
     	xmlFile += '<bokliste>';
 	var done = 0;	
 
@@ -131,6 +136,7 @@ app.get('/bok/:bokId',function (req,res) {
 	console.log('Bok id: ' + Id);
 	res.set('Content-Type', 'text/xml');
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
+	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/bok.dtd">'
     	xmlFile += '<bokliste>';
 	var done = 0;	
 
@@ -164,8 +170,19 @@ app.get('/bok/:bokId',function (req,res) {
 
 
 
-app.post('/',function (req,res) {
-	res.send('Got a post request')
+app.post('/forfatter/:forfatterId',function (req,res) {
+	var FiD = req.body.forfatter.forfatterID[0];
+	var fnavn = req.body.forfatter.fornavn[0];
+	var enavn = req.body.forfatter.etternavn[0];
+	var nat = req.body.forfatter.nasjonalitet[0];
+	db.run('INSERT INTO forfatter VALUES (?,?,?,?)', [FiD, fnavn, enavn, nat], function(err){
+		if (err){
+    			res.send("UUUPS noe gikk galt!");
+			return console.error(err.message);
+		}
+		res.send("Forfatter lagt til");
+	});
+
 });
 
 app.put('/',function (req,res) {
