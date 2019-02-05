@@ -105,13 +105,13 @@ app.get('/bok/',function (req,res) {
 	var done = 0;	
 
 	let sql = `SELECT * FROM bok ORDER BY bokID`;
- 	
+
 	db.serialize(function() {
 		db.all(sql, [], (err, rows) => {
  			if (err) {
     				throw err;
   			}
-	
+
 			var xml = builder.create('forfatterliste');
   			rows.forEach((row) => {
 				xmlFile += '<bok>';
@@ -119,7 +119,7 @@ app.get('/bok/',function (req,res) {
                 		xmlFile += '<tittel>' + row.tittel + '</tittel>';
                 		xmlFile += '<forfatterid>' + row.forfatterID + '</forfatterid>';
                 		xmlFile += '</bok>';
-           		 });		
+           		 });
 		done = 1;
 		});
 		while(!done) {
@@ -138,16 +138,16 @@ app.get('/bok/:bokId',function (req,res) {
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
 	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/bok.dtd">'
     	xmlFile += '<bokliste>';
-	var done = 0;	
+	var done = 0;
 
 	let sql = `SELECT * FROM bok WHERE bokID=? ORDER BY bokID`;
- 	
+
 	db.serialize(function() {
 		db.all(sql, [Id], (err, rows) => {
  			if (err) {
     				throw err;
   			}
-	
+
 			var xml = builder.create('bokliste');
   			rows.forEach((row) => {
 				xmlFile += '<bok>';
@@ -155,7 +155,7 @@ app.get('/bok/:bokId',function (req,res) {
                 		xmlFile += '<tittel>' + row.tittel + '</tittel>';
                 		xmlFile += '<forfatterid>' + row.forfatterID + '</forfatterid>';
                 		xmlFile += '</bok>';
-           		 });		
+           		 });
 		done = 1;
 		});
 		while(!done) {
@@ -180,17 +180,98 @@ app.post('/forfatter/:forfatterId',function (req,res) {
     			res.send("UUUPS noe gikk galt!");
 			return console.error(err.message);
 		}
-		res.send("Forfatter lagt til");
+		res.send("Forfatter ble lagt til");
 	});
 
 });
 
-app.put('/',function (req,res) {
-	res.send('Got a put request(update)')
+app.put('/forfatter/:fofatterId',function (req,res) {
+	var FiD = req.body.forfatter.forfatterID[0];
+	var fnavn = req.body.forfatter.fornavn[0];
+	var enavn = req.body.forfatter.etternavn[0];
+	var nat = req.body.forfatter.nasjonalitet[0];
+	let data = [fnavn, enavn, nat, FiD]
+	let sql = `UPDATE forfatter
+		   SET fornavn = ?, etternavn = ?, nasjonalitet = ?
+		   WHERE forfatterID = ?`
+	db.run(sql, data, function(err) {
+  		if (err) {
+    			res.send("UUUPS noe gikk galt!");
+			return console.error(err.message);
+  		}
+
+		if (this.changes != 1){
+			res.send("Forfatteren finnes ikke i databasen!");
+			return;
+		}
+		else res.send("Forfatteren ble endret"); 
+	});
 });
 
-app.delete('/',function (req,res) {
-	res.send('Delete received')
+app.delete('/forfatter/:forfatterId',function (req,res) {
+	var FiD = req.body.forfatter.forfatterID[0];
+	db.run('DELETE FROM forfatter WHERE (forfatterID = ?)', [FiD], function(err){
+		if (err) {
+    			res.send("UUUPS noe gikk galt!");
+			return console.error(err.message);
+  		}
+		if (this.changes != 1){
+			res.send("Noe gikk galt!");
+		}
+		res.send("Forfatteren ble slettet");
+	});
+});
+
+app.post('/bok/:bokId', function (req,res) {
+	var BiD = req.body.bok.bokID[0];
+	var tittel = req.body.bok.tittel[0];
+	var FiD = req.body.bok.forfatterID[0];
+
+	db.run('INSERT INTO bok VALUES (?,?,?)', [BiD, tittel, FiD], function(err){
+		if (err){
+    			res.send("UUUPS noe gikk galt!");
+			return console.error(err.message);
+		}
+		res.send("Boken ble lagt til");
+	});
+
+});
+
+app.put('/bok/:bokId',function (req,res) {
+	var BiD = req.body.bok.bokID[0];
+	var tittel = req.body.bok.tittel[0];
+	var FiD = req.body.bok.forfatterID[0];
+	let data = [tittel, FiD, BiD]
+	let sql = `UPDATE bok
+		   SET tittel = ?, forfatterID = ?
+		   WHERE bokID = ?`
+	
+	db.run(sql, data, function(err) {
+  		if (err) {
+    			res.send("UUUPS noe gikk galt!");
+			return console.error(err.message);
+  		}
+
+		if (this.changes != 1){
+			res.send("Boken finnes ikke i databasen!");
+			return;
+		}
+		else res.send("Boken ble endret"); 
+	});
+});
+
+app.delete('/bok/:bokId',function (req,res) {
+	var BiD = req.body.bok.bokID[0];
+	db.run('DELETE FROM bok WHERE (bokID = ?)', [BiD], function(err){
+		if (err) {
+    			res.send("UUUPS noe gikk galt!");
+			return console.error(err.message);
+  		}
+		if (this.changes != 1){
+			res.send("Noe gikk galt!");
+		}
+		res.send("Boken ble slettet");
+	});
 });
 
 app.listen(port, () => console.log(`RESTapi listening on port ${port}!`))
