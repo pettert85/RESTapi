@@ -168,6 +168,25 @@ app.get('/bok/:bokId',function (req,res) {
 		});
 });
 
+app.post('/login/',function (req,res) {
+	var bruker = req.body.login.brukernavn[0];
+	var pass = req.body.login.passord[0];
+
+	let sql = `SELECT passordhash AS hash FROM bruker WHERE fornavn  = ?`;
+ 
+// first row only
+db.get(sql, ['bruker'], (err, row) => {
+  if (err) {
+    return console.error(err.message);
+  }
+  return row
+    	? console.log(row.hash)
+	: console.log('nei');
+ });	
+
+
+});
+
 
 
 app.post('/forfatter/:forfatterId',function (req,res) {
@@ -185,7 +204,7 @@ app.post('/forfatter/:forfatterId',function (req,res) {
 
 });
 
-app.put('/forfatter/:fofatterId',function (req,res) {
+app.put('/forfatter/:forfatterId',function (req,res) {
 	var FiD = req.body.forfatter.forfatterID[0];
 	var fnavn = req.body.forfatter.fornavn[0];
 	var enavn = req.body.forfatter.etternavn[0];
