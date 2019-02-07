@@ -171,20 +171,29 @@ app.get('/bok/:bokId',function (req,res) {
 app.post('/login/',function (req,res) {
 	var bruker = req.body.login.brukernavn[0];
 	var pass = req.body.login.passord[0];
+	var hash;
 
 	let sql = `SELECT passordhash AS hash FROM bruker WHERE fornavn  = ?`;
- 
-// first row only
-db.get(sql, ['bruker'], (err, row) => {
-  if (err) {
-    return console.error(err.message);
-  }
-  return row
-    	? console.log(row.hash)
-	: console.log('nei');
- });	
+	// first row only
+	db.get(sql, [bruker], (err, row) => {
+  		if (err) {
+  			return console.error(err.message);
+		}
+		
+		else{
+			hash = row.hash;
+	  		console.log('row.hash: ' + row.hash);
+			console.log('innsendt: ' + pass);
+	
+			//fjerne tomme linjer 
+			hash = hash.trim();
+			pass = pass.trim();
 
-
+			if ( (pass.valueOf() == hash.valueOf()) ){
+				//set sessionID og responder med cookie
+			}
+		}
+	});
 });
 
 
