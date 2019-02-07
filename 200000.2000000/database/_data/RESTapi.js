@@ -5,6 +5,7 @@
 //npm install express, sqlite3, xmlbuilder --save
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
+const cookieParser = require('cookie-parser');
 var builder = require('xmlbuilder');
 const app = express();
 const port = 8888;
@@ -191,6 +192,13 @@ app.post('/login/',function (req,res) {
 
 			if ( (pass.valueOf() == hash.valueOf()) ){
 				//set sessionID og responder med cookie
+				console.log('setter cookie');
+				
+    				// Set cookie
+    				res.set('Content-Type', 'text/xml');
+				res.cookie('rememberme', '1', { maxAge: 900000, httpOnly: true });
+				res.send('Cookie satt');
+
 			}
 		}
 	});
