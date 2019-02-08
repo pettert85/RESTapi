@@ -13,6 +13,7 @@ var node = require("deasync");
 var bodyParser = require("body-parser");
 require('body-parser-xml')(bodyParser); 
 app.use(bodyParser.xml());
+app.use(cookieParser());
 node.loop = node.runLoopOnce;
 let db = new sqlite3.Database('./database', sqlite3.OPEN_READWRITE, (err) => {
 if (err){
@@ -21,17 +22,18 @@ if (err){
 console.log('DB connected');
 });
 
+
 app.get('/forfatter/',function (req,res) {
 	res.set('Content-Type', 'text/xml');
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
 	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/forfatter.dtd">'
 
     	xmlFile += '<forfatterliste>';
-	var done = 0;	
+	var done = 0;
 
 	let sql = `SELECT * FROM forfatter
            ORDER BY forfatterID`;
- 	
+
 	db.serialize(function() {
 		db.all(sql, [], (err, rows) => {
  			if (err) {
@@ -208,11 +210,31 @@ app.post('/login/',function (req,res) {
 			}
 		}
 	});
+
 });
 
 
+app.post('/logout/',function (req,res){
+	
+	var sessionID = req.body.logout.sessionID[0];
+	db.run(`DELETE from sesjon where sessionID = ?`, [sessionID], function(err){
+		
+		if(err){
+			console.log("Sesjonen ble ikke avsluttet!");
+			return console.error(err.message);
+		}
+		console.log("Logget av");
+		res.send("Logget av, velkommen igjen!");
+	});
+});
+
 
 app.post('/forfatter/:forfatterId',function (req,res) {
+
+	var cookieID = req.cookies;
+	cookieID.split('\'');
+	
+	console.log(cookieID[1]);
 	var FiD = req.body.forfatter.forfatterID[0];
 	var fnavn = req.body.forfatter.fornavn[0];
 	var enavn = req.body.forfatter.etternavn[0];
