@@ -185,8 +185,6 @@ app.post('/login/',function (req,res) {
 
 		else{
 			hash = row.hash;
-	  		console.log('row.hash: ' + row.hash);
-			console.log('innsendt: ' + pass);
 
 			//fjerne tomme linjer 
 			hash = hash.trim();
@@ -205,7 +203,7 @@ app.post('/login/',function (req,res) {
 				});
     				// Set cookie
     				res.append('Set-Cookie', 'FortuneCookie='+sessionID+'; Path=/; HttpOnly');
-				res.send();
+				res.send('Login var vellykket');
 
 			}
 		}
@@ -230,112 +228,176 @@ app.post('/logout/',function (req,res){
 
 
 app.post('/forfatter/:forfatterId',function (req,res) {
-
-	var cookieID = req.cookies;
-	cookieID.split('\'');
-	
-	console.log(cookieID[1]);
-	var FiD = req.body.forfatter.forfatterID[0];
-	var fnavn = req.body.forfatter.fornavn[0];
-	var enavn = req.body.forfatter.etternavn[0];
-	var nat = req.body.forfatter.nasjonalitet[0];
-	db.run('INSERT INTO forfatter VALUES (?,?,?,?)', [FiD, fnavn, enavn, nat], function(err){
-		if (err){
-    			res.send("UUUPS noe gikk galt!");
-			return console.error(err.message);
-		}
-		res.send("Forfatter ble lagt til");
-	});
-
+	if(validSession(req.cookies.FortuneCookie)){
+		var FiD = req.body.forfatter.forfatterID[0];
+		var fnavn = req.body.forfatter.fornavn[0];
+		var enavn = req.body.forfatter.etternavn[0];
+		var nat = req.body.forfatter.nasjonalitet[0];
+		db.run('INSERT INTO forfatter VALUES (?,?,?,?)', [FiD, fnavn, enavn, nat], function(err){
+			if (err){
+    				res.send("forfatterID finnes allerede!");
+				return console.error(err.message);
+			}
+				res.send("Forfatter ble lagt til");
+				return;
+		});
+	}
+	else{
+		res.send('Du må logge inn!');
+	}
 });
 
 app.put('/forfatter/:forfatterId',function (req,res) {
-	var FiD = req.body.forfatter.forfatterID[0];
-	var fnavn = req.body.forfatter.fornavn[0];
-	var enavn = req.body.forfatter.etternavn[0];
-	var nat = req.body.forfatter.nasjonalitet[0];
-	let data = [fnavn, enavn, nat, FiD]
-	let sql = `UPDATE forfatter
-		   SET fornavn = ?, etternavn = ?, nasjonalitet = ?
-		   WHERE forfatterID = ?`
-	db.run(sql, data, function(err) {
-  		if (err) {
-    			res.send("UUUPS noe gikk galt!");
-			return console.error(err.message);
-  		}
+	if(validSession(req.cookies.FortuneCookie)){
+		var FiD = req.body.forfatter.forfatterID[0];
+		var fnavn = req.body.forfatter.fornavn[0];
+		var enavn = req.body.forfatter.etternavn[0];
+		var nat = req.body.forfatter.nasjonalitet[0];
+		let data = [fnavn, enavn, nat, FiD]
+		let sql = `UPDATE forfatter
+			   SET fornavn = ?, etternavn = ?, nasjonalitet = ?
+			   WHERE forfatterID = ?`
+		db.run(sql, data, function(err) {
+	  		if (err) {
+	    			res.send("UUUPS noe gikk galt!");
+				return console.error(err.message);
+	  		}
 
-		if (this.changes != 1){
-			res.send("Forfatteren finnes ikke i databasen!");
-			return;
-		}
-		else res.send("Forfatteren ble endret"); 
-	});
+			if (this.changes != 1){
+				res.send("Forfatteren finnes ikke i databasen!");
+				return;
+			}
+			else res.send("Forfatteren ble endret"); 
+		});
+	}
+
+	else{
+		res.send('Du må logge inn!');
+	}
 });
 
 app.delete('/forfatter/:forfatterId',function (req,res) {
-	var FiD = req.body.forfatter.forfatterID[0];
-	db.run('DELETE FROM forfatter WHERE (forfatterID = ?)', [FiD], function(err){
-		if (err) {
-    			res.send("UUUPS noe gikk galt!");
-			return console.error(err.message);
-  		}
-		if (this.changes != 1){
-			res.send("Noe gikk galt!");
-		}
-		res.send("Forfatteren ble slettet");
-	});
+	if(validSession(req.cookies.FortuneCookie)){
+		var FiD = req.body.forfatter.forfatterID[0];
+		db.run('DELETE FROM forfatter WHERE (forfatterID = ?)', [FiD], function(err){
+			if (err) {
+	    			res.send("UUUPS noe gikk galt!");
+				return console.error(err.message);
+	  		}
+			if (this.changes != 1){
+				res.send("Noe gikk galt!");
+			}
+			res.send("Forfatteren ble slettet");
+		});
+	}
+
+	else{
+		res.send('Du må logge inn!');
+	}
 });
 
 app.post('/bok/:bokId', function (req,res) {
-	var BiD = req.body.bok.bokID[0];
-	var tittel = req.body.bok.tittel[0];
-	var FiD = req.body.bok.forfatterID[0];
+	if(validSession(req.cookies.FortuneCookie)){
+		var BiD = req.body.bok.bokID[0];
+		var tittel = req.body.bok.tittel[0];
+		var FiD = req.body.bok.forfatterID[0];
 
-	db.run('INSERT INTO bok VALUES (?,?,?)', [BiD, tittel, FiD], function(err){
-		if (err){
-    			res.send("UUUPS noe gikk galt!");
-			return console.error(err.message);
-		}
-		res.send("Boken ble lagt til");
-	});
-
+		db.run('INSERT INTO bok VALUES (?,?,?)', [BiD, tittel, FiD], function(err){
+			if (err){
+	    			res.send("UUUPS noe gikk galt!");
+				return console.error(err.message);
+			}
+			res.send("Boken ble lagt til");
+		});
+	}
+	else{
+		res.send('Du må logge inn!');
+	}
 });
 
 app.put('/bok/:bokId',function (req,res) {
-	var BiD = req.body.bok.bokID[0];
-	var tittel = req.body.bok.tittel[0];
-	var FiD = req.body.bok.forfatterID[0];
-	let data = [tittel, FiD, BiD]
-	let sql = `UPDATE bok
-		   SET tittel = ?, forfatterID = ?
-		   WHERE bokID = ?`
-	
-	db.run(sql, data, function(err) {
-  		if (err) {
-    			res.send("UUUPS noe gikk galt!");
-			return console.error(err.message);
-  		}
+	if(validSession(req.cookies.FortuneCookie)){
+		var BiD = req.body.bok.bokID[0];
+		var tittel = req.body.bok.tittel[0];
+		var FiD = req.body.bok.forfatterID[0];
+		let data = [tittel, FiD, BiD]
+		let sql = `UPDATE bok
+			   SET tittel = ?, forfatterID = ?
+			   WHERE bokID = ?`
+		
+		db.run(sql, data, function(err) {
+	  		if (err) {
+	    			res.send("UUUPS noe gikk galt!");
+				return console.error(err.message);
+	  		}
 
-		if (this.changes != 1){
-			res.send("Boken finnes ikke i databasen!");
-			return;
-		}
-		else res.send("Boken ble endret"); 
-	});
+			if (this.changes != 1){
+				res.send("Boken finnes ikke i databasen!");
+				return;
+			}
+			else res.send("Boken ble endret"); 
+		});
+	}
+
+	else{
+		res.send('Du må logge inn!');
+	}
 });
 
 app.delete('/bok/:bokId',function (req,res) {
-	var BiD = req.body.bok.bokID[0];
-	db.run('DELETE FROM bok WHERE (bokID = ?)', [BiD], function(err){
-		if (err) {
-    			res.send("UUUPS noe gikk galt!");
-			return console.error(err.message);
-  		}
-		if (this.changes != 1){
-			res.send("Noe gikk galt!");
-		}
-		res.send("Boken ble slettet");
-	});
+	if(validSession(req.cookies.FortuneCookie)){
+		var BiD = req.body.bok.bokID[0];
+		db.run('DELETE FROM bok WHERE (bokID = ?)', [BiD], function(err){
+			if (err) {
+	    			res.send("UUUPS noe gikk galt!");
+				return console.error(err.message);
+	  		}
+			if (this.changes != 1){
+				res.send("Noe gikk galt!");
+			}
+			res.send("Boken ble slettet");
+		});
+	}
+
+	else{
+		res.send('Du må logge inn!');
+	}
 });
+
+
+//sjekker sessionID
+function validSession(sessionID) {
+	var x;
+		db.get('SELECT sessionID as ID FROM sesjon WHERE sessionID= ?', [sessionID], (err, row) => {
+  			if (err) {
+    				return console.error(err.message);
+  			}
+	
+			//console.log('Row.ID:' + row.ID + 'sessionID' + sessionID +"noe");
+			if(row == undefined){
+			console.log('ingen matchende sessionID i databasen');
+			x = false;
+			}
+			
+			else if(sessionID.localeCompare(row.ID) != 0 ) {
+				console.log('sessionID matcher ikke')
+				x=false;
+			}
+		
+			else{
+			
+				console.log('session ID matcher')
+				x = true;
+			}
+		});
+  		
+		//syncronize shit before return
+		while(x === undefined) {
+    			require('deasync').sleep(100);
+  		}
+
+		return x;
+}
+
 
 app.listen(port, () => console.log(`RESTapi listening on port ${port}!`))
