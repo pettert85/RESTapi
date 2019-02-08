@@ -180,24 +180,30 @@ app.post('/login/',function (req,res) {
   		if (err) {
   			return console.error(err.message);
 		}
-		
+
 		else{
 			hash = row.hash;
 	  		console.log('row.hash: ' + row.hash);
 			console.log('innsendt: ' + pass);
-	
+
 			//fjerne tomme linjer 
 			hash = hash.trim();
 			pass = pass.trim();
 
 			if ( (pass.valueOf() == hash.valueOf()) ){
 				//set sessionID og responder med cookie
-				console.log('setter cookie');
-				
+				var sessionID = parseInt(Math.random() * (99999 - 11111) + 11111);
+				db.run(`INSERT INTO sesjon VALUES (?, ?)`, [sessionID, bruker], function(err){
+					if(err){
+						console.log("Session ID not set!");
+						return console.error(err.message);
+					}
+					console.log('Session ID:' + sessionID + " er satt for: "+bruker);
+					console.log('setter cookie');
+				});
     				// Set cookie
-    				res.set('Content-Type', 'text/xml');
-				res.cookie('rememberme', '1', { maxAge: 900000, httpOnly: true });
-				res.send('Cookie satt');
+    				res.append('Set-Cookie', 'FortuneCookie='+sessionID+'; Path=/; HttpOnly');
+				res.send();
 
 			}
 		}
