@@ -179,51 +179,54 @@ app.post('/login/',function (req,res) {
 	let sql = `SELECT passordhash AS hash FROM bruker WHERE fornavn  = ?`;
 	// first row only
 	db.get(sql, [bruker], (err, row) => {
-  		if (err) {
-  			return console.error(err.message);
+  	   if (err) {
+  		return console.error(err.message);
+	   }
+
+	   else{
+		hash = row.hash;
+
+		//fjerne tomme linjer 
+		hash = hash.trim();
+		pass = pass.trim();
+
+		if ( (pass.valueOf() == hash.valueOf()) ){
+			//set sessionID og responder med cookie
+			var sessionID = parseInt(Math.random() * (99999 - 11111) + 11111);
+			db.run(`INSERT INTO sesjon VALUES (?, ?)`, [sessionID, bruker], function(err){
+				if(err){
+					console.log("Session ID not set!");
+					return console.error(err.message);
+				}
+				console.log('Session ID:' + sessionID + ' er satt for: '+bruker);
+			});
+  		// Set cookie
+    		res.append('Set-Cookie', 'FortuneCookie='+sessionID+'; Path=/; HttpOnly');
+		res.send('Login var vellykket. Velkommen ' + bruker +'!');
+
 		}
-
-		else{
-			hash = row.hash;
-
-			//fjerne tomme linjer 
-			hash = hash.trim();
-			pass = pass.trim();
-
-			if ( (pass.valueOf() == hash.valueOf()) ){
-				//set sessionID og responder med cookie
-				var sessionID = parseInt(Math.random() * (99999 - 11111) + 11111);
-				db.run(`INSERT INTO sesjon VALUES (?, ?)`, [sessionID, bruker], function(err){
-					if(err){
-						console.log("Session ID not set!");
-						return console.error(err.message);
-					}
-					console.log('Session ID:' + sessionID + " er satt for: "+bruker);
-					console.log('setter cookie');
-				});
-    				// Set cookie
-    				res.append('Set-Cookie', 'FortuneCookie='+sessionID+'; Path=/; HttpOnly');
-				res.send('Login var vellykket');
-
-			}
-		}
+	  }
 	});
-
 });
 
 
 app.post('/logout/',function (req,res){
-	
-	var sessionID = req.body.logout.sessionID[0];
-	db.run(`DELETE from sesjon where sessionID = ?`, [sessionID], function(err){
-		
-		if(err){
-			console.log("Sesjonen ble ikke avsluttet!");
-			return console.error(err.message);
-		}
-		console.log("Logget av");
-		res.send("Logget av, velkommen igjen!");
-	});
+	if(validSession(req.cookies.FortuneCookie)){
+		var sessionID = req.body.logout.sessionID[0];
+		db.run(`DELETE from sesjon where sessionID = ?`, [sessionID], function(err){
+
+			if(err){
+				console.log("Sesjonen ble ikke avsluttet!");
+				return console.error(err.message);
+			}
+			else{
+				console.log("Logget av");
+				res.send("Logget av, velkommen igjen!");
+			}
+		});
+	}
+	else
+		res.send("Du er ikke logget inn!");
 });
 
 
@@ -238,8 +241,10 @@ app.post('/forfatter/:forfatterId',function (req,res) {
     				res.send("forfatterID finnes allerede!");
 				return console.error(err.message);
 			}
+			else{
 				res.send("Forfatter ble lagt til");
 				return;
+			}
 		});
 	}
 	else{
@@ -267,7 +272,8 @@ app.put('/forfatter/:forfatterId',function (req,res) {
 				res.send("Forfatteren finnes ikke i databasen!");
 				return;
 			}
-			else res.send("Forfatteren ble endret"); 
+			else 
+				res.send("Forfatteren ble endret"); 
 		});
 	}
 
@@ -287,7 +293,8 @@ app.delete('/forfatter/:forfatterId',function (req,res) {
 			if (this.changes != 1){
 				res.send("Noe gikk galt!");
 			}
-			res.send("Forfatteren ble slettet");
+			else
+				res.send("Forfatteren ble slettet");
 		});
 	}
 
@@ -295,6 +302,28 @@ app.delete('/forfatter/:forfatterId',function (req,res) {
 		res.send('Du må logge inn!');
 	}
 });
+
+
+app.delete('/forfatter',function (req,res) {
+	if(validSession(req.cookies.FortuneCookie)){
+		db.run(`DELETE FROM forfatter`, function(err){
+			if (err) {
+	    			res.send("UUUPS noe gikk galt!");
+				return console.error(err.message);
+	  		}
+			if (this.changes == 0){
+				res.send("Tabellen er allerede tom");
+			}
+			else
+				res.send("Alle forfattere ble slettet");
+		});
+	}
+
+	else{
+		res.send('Du må logge inn!');
+	}
+});
+
 
 app.post('/bok/:bokId', function (req,res) {
 	if(validSession(req.cookies.FortuneCookie)){
@@ -307,7 +336,8 @@ app.post('/bok/:bokId', function (req,res) {
 	    			res.send("UUUPS noe gikk galt!");
 				return console.error(err.message);
 			}
-			res.send("Boken ble lagt til");
+			else
+				res.send("Boken ble lagt til");
 		});
 	}
 	else{
@@ -335,7 +365,8 @@ app.put('/bok/:bokId',function (req,res) {
 				res.send("Boken finnes ikke i databasen!");
 				return;
 			}
-			else res.send("Boken ble endret"); 
+			else 
+				res.send("Boken ble endret"); 
 		});
 	}
 
@@ -355,7 +386,8 @@ app.delete('/bok/:bokId',function (req,res) {
 			if (this.changes != 1){
 				res.send("Noe gikk galt!");
 			}
-			res.send("Boken ble slettet");
+			else
+				res.send("Boken ble slettet");
 		});
 	}
 
@@ -364,6 +396,25 @@ app.delete('/bok/:bokId',function (req,res) {
 	}
 });
 
+app.delete('/bok',function (req,res) {
+	if(validSession(req.cookies.FortuneCookie)){
+		db.run('DELETE FROM bok', function(err){
+			if (err) {
+	    			res.send("UUUPS noe gikk galt!");
+				return console.error(err.message);
+	  		}
+			if (this.changes == 0){
+				res.send("Tabellen er allerede tom");
+			}
+			else
+				res.send("Alle ble slettet");
+		});
+	}
+
+	else{
+		res.send('Du må logge inn!');
+	}
+});
 
 //sjekker sessionID
 function validSession(sessionID) {
@@ -372,25 +423,25 @@ function validSession(sessionID) {
   			if (err) {
     				return console.error(err.message);
   			}
-	
+
 			//console.log('Row.ID:' + row.ID + 'sessionID' + sessionID +"noe");
 			if(row == undefined){
 			console.log('ingen matchende sessionID i databasen');
 			x = false;
 			}
-			
+
 			else if(sessionID.localeCompare(row.ID) != 0 ) {
 				console.log('sessionID matcher ikke')
 				x=false;
 			}
-		
+
 			else{
-			
+
 				console.log('session ID matcher')
 				x = true;
 			}
 		});
-  		
+
 		//syncronize shit before return
 		while(x === undefined) {
     			require('deasync').sleep(100);
