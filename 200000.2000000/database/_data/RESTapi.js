@@ -23,7 +23,19 @@ console.log('DB connected');
 });
 
 
+//This enables CORS - Cross Origin Resource Sharing (for AJAX)
+//which by default does not work!
+app.all('*', function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Credentials', true);
+  res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
+
 app.get('/forfatter/',function (req,res) {
+	console.log('request');
 	res.set('Content-Type', 'text/xml');
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
 	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/forfatter.dtd">'
