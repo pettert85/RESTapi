@@ -184,11 +184,15 @@ app.get('/bok/:bokId',function (req,res) {
 });
 
 app.post('/login/',function (req,res) {
+	res.set('Content-Type', 'text/xml');
 	var bruker = req.body.login.brukernavn[0];
 	var pass = req.body.login.passord[0];
 	var hash;
-
+	var status = "Feil brukernavn / passord";
 	let sql = `SELECT passordhash AS hash FROM bruker WHERE fornavn  = ?`;
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	
+
 	// first row only
 	db.get(sql, [bruker], (err, row) => {
   	   if (err) {
@@ -209,12 +213,22 @@ app.post('/login/',function (req,res) {
 				if(err){
 					console.log("Session ID not set!");
 					return console.error(err.message);
+
 				}
 				console.log('Session ID:' + sessionID + ' er satt for: '+bruker);
+				status = "Login Success";
 			});
-  		// Set cookie
+
+			xmlFile += '<root>';
+			xmlFile += '<login>';
+			xmlFile += '<bruker>' + bruker + '</bruker>';
+			xmlFile += '<status>' + status + '</status>';
+			xmlFile += '</login>';
+			xmlFile += '</root>';
+
+  			// Set cookie
     		res.append('Set-Cookie', 'FortuneCookie='+sessionID+'; Path=/; HttpOnly');
-		res.send('Login var vellykket. Velkommen ' + bruker +'!');
+			res.send(xmlFile);
 
 		}
 	  }
