@@ -237,36 +237,27 @@ app.post('/login/',function (req,res) {
 });
 
 
-app.post('/logout/',function (req,res){
-	var status;
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+app.get('/logout/',function (req,res){
 
 	if(validSession(req.cookies.FortuneCookie)){
-		var sessionID = req.body.logout.sessionID[0];
+		var sessionID = req.cookies.FortuneCookie;
 		db.run(`DELETE from sesjon where sessionID = ?`, [sessionID], function(err){
 
 			if(err){
 				console.log("Sesjonen ble ikke avsluttet!");
 				return console.error(err.message);
 			}
+			
 			else{
 				console.log("Logget av");
-				status = "logget av!";
 			}
 		});
 	}
 	
 	else{
-		status="Ikke inlogget";
+		console.log("Ikke inlogget");
 	}
-	
-	xmlFile += '<root>';
-	xmlFile += '<logout>';
-	xmlFile += '<status>' + status + '</status>';
-	xmlFile += '</logout>';
-	xmlFile += '</root>';
-	
-	res.send("xmlFile");
+	res.send();
 });
 
 app.post('/forfatter/:forfatterId',function (req,res) {
