@@ -25,17 +25,18 @@ console.log('DB connected');
 
 //This enables CORS - Cross Origin Resource Sharing (for AJAX)
 //which by default does not work!
-app.all('*', function(req, res, next) {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Credentials', true);
-  res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  next();
-});
+
+// also rememeber that client request must be set with : xhttp.withCredentials = true; 
+
+var cors = require('cors');
+var corsOptions = {
+    origin: 'http://bp', // must be set to trusted domain(s)
+    credentials:true,   
+    'Access-Control-Allow-Credentials': true };
+app.use(cors(corsOptions));
 
 
 app.get('/forfatter/',function (req,res) {
-	console.log('request');
 	res.set('Content-Type', 'text/xml');
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
 	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/forfatter.dtd">'
@@ -237,6 +238,9 @@ app.post('/login/',function (req,res) {
 
 
 app.post('/logout/',function (req,res){
+	var status;
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+
 	if(validSession(req.cookies.FortuneCookie)){
 		var sessionID = req.body.logout.sessionID[0];
 		db.run(`DELETE from sesjon where sessionID = ?`, [sessionID], function(err){
@@ -247,14 +251,23 @@ app.post('/logout/',function (req,res){
 			}
 			else{
 				console.log("Logget av");
-				res.send("Logget av, velkommen igjen!");
+				status = "logget av!";
 			}
 		});
 	}
-	else
-		res.send("Du er ikke logget inn!");
+	
+	else{
+		status="Ikke inlogget";
+	}
+	
+	xmlFile += '<root>';
+	xmlFile += '<logout>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '</logout>';
+	xmlFile += '</root>';
+	
+	res.send("xmlFile");
 });
-
 
 app.post('/forfatter/:forfatterId',function (req,res) {
 	if(validSession(req.cookies.FortuneCookie)){
