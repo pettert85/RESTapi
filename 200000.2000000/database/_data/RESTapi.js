@@ -261,7 +261,7 @@ app.get('/logout/',function (req,res){
 });
 
 app.post('/forfatter/:forfatterId',function (req,res) {
-	if(validSession(req.cookies.FortuneCookie)){
+		if(validSession(req.cookies.FortuneCookie)){
 		var FiD = req.body.forfatter.forfatterID[0];
 		var fnavn = req.body.forfatter.fornavn[0];
 		var enavn = req.body.forfatter.etternavn[0];
