@@ -15,6 +15,9 @@ require('body-parser-xml')(bodyParser);
 app.use(bodyParser.xml());
 app.use(cookieParser());
 node.loop = node.runLoopOnce;
+var statusMessage;
+var status;
+
 let db = new sqlite3.Database('./database', sqlite3.OPEN_READWRITE, (err) => {
 if (err){
 	console.error(err.message);
@@ -185,54 +188,60 @@ app.get('/bok/:bokId',function (req,res) {
 });
 
 app.post('/login/',function (req,res) {
-	res.set('Content-Type', 'text/xml');
 	var bruker = req.body.login.brukernavn[0];
 	var pass = req.body.login.passord[0];
 	var hash;
-	var status = "Feil brukernavn / passord";
 	let sql = `SELECT passordhash AS hash FROM bruker WHERE fornavn  = ?`;
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-	
+	status = "false";
 
 	// first row only
 	db.get(sql, [bruker], (err, row) => {
   	   if (err) {
-  		return console.error(err.message);
+  		console.error(err.message);
 	   }
 
 	   else{
-		hash = row.hash;
+	   	if(row == undefined){
+	   		statusMessage = "Feil brukernavn";
+	   		console.log("Feil brukernavn");
+	   	}
 
-		//fjerne tomme linjer 
-		hash = hash.trim();
-		pass = pass.trim();
+	   	else{
+			hash = row.hash;
 
-		if ( (pass.valueOf() == hash.valueOf()) ){
-			//set sessionID og responder med cookie
-			var sessionID = parseInt(Math.random() * (99999 - 11111) + 11111);
-			db.run(`INSERT INTO sesjon VALUES (?, ?)`, [sessionID, bruker], function(err){
-				if(err){
-					console.log("Session ID not set!");
-					return console.error(err.message);
+			//fjerne tomme linjer 
+			hash = hash.trim();
+			pass = pass.trim();
 
-				}
-				console.log('Session ID:' + sessionID + ' er satt for: '+bruker);
-				status = "Login Success";
-			});
+			if ( (pass.valueOf() == hash.valueOf()) ){
+				statusMessage="Logg inn vellykket"
+				status = "true";
+				//set sessionID og responder med cookie
+				var sessionID = parseInt(Math.random() * (99999 - 11111) + 11111);
+				db.run(`INSERT INTO sesjon VALUES (?, ?)`, [sessionID, bruker], function(err){
+					if(err){
+						console.log("Session ID not set!");
+						return console.error(err.message);
 
-			xmlFile += '<root>';
-			xmlFile += '<login>';
-			xmlFile += '<bruker>' + bruker + '</bruker>';
-			xmlFile += '<status>' + status + '</status>';
-			xmlFile += '</login>';
-			xmlFile += '</root>';
+					}
 
-  			// Set cookie
-    		res.append('Set-Cookie', 'FortuneCookie='+sessionID+'; Path=/; HttpOnly');
-			res.send(xmlFile);
-
+					console.log('Session ID:' + sessionID + ' er satt for: '+bruker);
+				});
+				
+			res.append('Set-Cookie', 'FortuneCookie='+sessionID+'; Path=/; HttpOnly');
+			}			
 		}
-	  }
+	}
+		
+		res.set('Content-Type', 'text/xml');
+		var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+		xmlFile += '<login>';
+		xmlFile += '<status>' + status + '</status>';
+		xmlFile += '<message>' + statusMessage + '</message>';
+		xmlFile += '</login>';
+
+			// Set cookie
+		res.send(xmlFile);  
 	});
 });
 
