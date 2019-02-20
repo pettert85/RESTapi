@@ -73,55 +73,59 @@ app.get('/forfatter/',function (req,res) {
 
         	xmlFile += '</forfatterliste>';
         	res.send(xmlFile);
+
 	});
 });
 
 app.get('/forfatter/:forfatterId',function (req,res) {
-	var Id = req.param('forfatterId');
-	console.log('ForfatterID: ' + Id);
 	res.set('Content-Type', 'text/xml');
-    	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
-	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/forfatter.dtd">'
-    	xmlFile += '<forfatterliste>';
+
+	var Id = req.param('forfatterId');
 	var done = 0;	
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
+		xmlFile += '<!DOCTYPE note SYSTEM "http://bp/forfatter.dtd">'
+		xmlFile += '<forfatterliste>';
 
 	let sql = `SELECT * FROM forfatter WHERE forfatterID=?
-           ORDER BY forfatterID`;
- 	
+	       ORDER BY forfatterID`;
+		
 	db.serialize(function() {
 		db.all(sql, [Id], (err, rows) => {
- 			if (err) {
-    				throw err;
-  			}
-	
+				if (err) {
+					throw err;
+				}
+
 			var xml = builder.create('forfatterliste');
-  			rows.forEach((row) => {
+					
+					rows.forEach((row) => {
 				xmlFile += '<forfatter>';
-              			xmlFile += '<forfatterid>' + row.forfatterID + '</forfatterid>';
-                		xmlFile += '<fornavn>' + row.fornavn + '</fornavn>';
-                		xmlFile += '<etternavn>' + row.etternavn + '</etternavn>';
-                		xmlFile += '<nasjonalitet>' + row.nasjonalitet + '</nasjonalitet>'
-                		xmlFile += '</forfatter>';
-           		 });		
+	          			xmlFile += '<forfatterid>' + row.forfatterID + '</forfatterid>';
+	            		xmlFile += '<fornavn>' + row.fornavn + '</fornavn>';
+	            		xmlFile += '<etternavn>' + row.etternavn + '</etternavn>';
+	            		xmlFile += '<nasjonalitet>' + row.nasjonalitet + '</nasjonalitet>'
+	            		xmlFile += '</forfatter>';
+	       	});		
 		done = 1;
 		});
+		
 		while(!done) {
-        		node.loop();
-        	}
+	    		node.loop();
+	    }
 
-        	xmlFile += '</forfatterliste>';
-        	res.send(xmlFile);
+	   	xmlFile += '</forfatterliste>';
+	   	res.send(xmlFile);
 
-		});
+	});
 });
 
 
 app.get('/bok/',function (req,res) {
 	res.set('Content-Type', 'text/xml');
-    	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
-	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/bok.dtd">'
+    var done = 0;	
+    var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
+		xmlFile += '<!DOCTYPE note SYSTEM "http://bp/bok.dtd">'
     	xmlFile += '<bokliste>';
-	var done = 0;	
+	
 
 	let sql = `SELECT * FROM bok ORDER BY bokID`;
 
@@ -138,15 +142,16 @@ app.get('/bok/',function (req,res) {
                 		xmlFile += '<tittel>' + row.tittel + '</tittel>';
                 		xmlFile += '<forfatterid>' + row.forfatterID + '</forfatterid>';
                 		xmlFile += '</bok>';
-           		 });
-		done = 1;
+           	});
+			done = 1;
 		});
+		
 		while(!done) {
-        		node.loop();
-        	}
+        	node.loop();
+        }
 
-        	xmlFile += '</bokliste>';
-        	res.send(xmlFile);
+        xmlFile += '</bokliste>';
+        res.send(xmlFile);
 	});
 });
 
@@ -193,6 +198,7 @@ app.post('/login/',function (req,res) {
 	var hash;
 	let sql = `SELECT passordhash AS hash FROM bruker WHERE fornavn  = ?`;
 	status = "false";
+	statusMessage = undefined;
 
 	// first row only
 	db.get(sql, [bruker], (err, row) => {
@@ -200,10 +206,18 @@ app.post('/login/',function (req,res) {
   		console.error(err.message);
 	   }
 
-	   else{
 	   	if(row == undefined){
 	   		statusMessage = "Feil brukernavn";
 	   		console.log("Feil brukernavn");
+	   		res.set('Content-Type', 'text/xml');
+			
+			var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+			xmlFile += '<response>';
+			xmlFile += '<status>' + status + '</status>';
+			xmlFile += '<message>' + statusMessage + '</message>';
+			xmlFile += '</response>';
+			res.send(xmlFile);
+	   		return;
 	   	}
 
 	   	else{
@@ -220,8 +234,9 @@ app.post('/login/',function (req,res) {
 				var sessionID = parseInt(Math.random() * (99999 - 11111) + 11111);
 				db.run(`INSERT INTO sesjon VALUES (?, ?)`, [sessionID, bruker], function(err){
 					if(err){
+						statusMessage = "Noe gikk galt!";
 						console.log("Session ID not set!");
-						return console.error(err.message);
+						console.error(err.message);
 
 					}
 
@@ -229,20 +244,24 @@ app.post('/login/',function (req,res) {
 				});
 				
 			res.append('Set-Cookie', 'FortuneCookie='+sessionID+'; Path=/; HttpOnly');
+			}
+			else{
+				statusMessage = "Feil passord!";
 			}			
 		}
-	}
-		
-		res.set('Content-Type', 'text/xml');
-		var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-		xmlFile += '<login>';
-		xmlFile += '<status>' + status + '</status>';
-		xmlFile += '<message>' + statusMessage + '</message>';
-		xmlFile += '</login>';
-
-			// Set cookie
-		res.send(xmlFile);  
 	});
+	
+	while(statusMessage === undefined) {
+    	require('deasync').sleep(100);
+  	}
+ 
+	res.set('Content-Type', 'text/xml');
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	xmlFile += '<response>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '<message>' + statusMessage + '</message>';
+	xmlFile += '</response>';
+	res.send(xmlFile);
 });
 
 
@@ -270,25 +289,42 @@ app.get('/logout/',function (req,res){
 });
 
 app.post('/forfatter/:forfatterId',function (req,res) {
-		if(validSession(req.cookies.FortuneCookie)){
+	if(validSession(req.cookies.FortuneCookie)){
 		var FiD = req.body.forfatter.forfatterID[0];
 		var fnavn = req.body.forfatter.fornavn[0];
 		var enavn = req.body.forfatter.etternavn[0];
 		var nat = req.body.forfatter.nasjonalitet[0];
+		status = "false";
+		statusMessage = undefined;
+		
 		db.run('INSERT INTO forfatter VALUES (?,?,?,?)', [FiD, fnavn, enavn, nat], function(err){
 			if (err){
-    				res.send("forfatterID finnes allerede!");
-				return console.error(err.message);
+				statusMessage = "forfatterID finnes allerede!";
+				console.error(err.message);
 			}
 			else{
-				res.send("Forfatter ble lagt til");
-				return;
+				statusMessage = "Forfatter ble lagt til";
+				status = "true";
+				console.log("first" + status + ", " + statusMessage);
 			}
 		});
+
 	}
 	else{
-		res.send('Du må logge inn!');
+		statusMessage = 'Du må logge inn!';
 	}
+	console.log("Foran: " + status + ", " + statusMessage);
+	while(statusMessage === undefined) {
+    			require('deasync').sleep(100);
+  		}
+  	console.log("etter" + status + ", " + statusMessage);
+	res.set('Content-Type', 'text/xml');
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	xmlFile += '<response>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '<message>' + statusMessage + '</message>';
+	xmlFile += '</response>';
+	res.send(xmlFile);	
 });
 
 app.put('/forfatter/:forfatterId',function (req,res) {
@@ -298,69 +334,124 @@ app.put('/forfatter/:forfatterId',function (req,res) {
 		var enavn = req.body.forfatter.etternavn[0];
 		var nat = req.body.forfatter.nasjonalitet[0];
 		let data = [fnavn, enavn, nat, FiD]
+		status = "false";
+		statusMessage = undefined;
+
 		let sql = `UPDATE forfatter
 			   SET fornavn = ?, etternavn = ?, nasjonalitet = ?
-			   WHERE forfatterID = ?`
+			   WHERE forfatterID = ?`;
+		
 		db.run(sql, data, function(err) {
 	  		if (err) {
-	    			res.send("UUUPS noe gikk galt!");
-				return console.error(err.message);
+	    			statusMessage = "UUUPS noe gikk galt!";
+				 	console.error(err.message);
 	  		}
 
 			if (this.changes != 1){
-				res.send("Forfatteren finnes ikke i databasen!");
-				return;
+				statusMessage = "Forfatteren finnes ikke i databasen!";
 			}
-			else 
-				res.send("Forfatteren ble endret"); 
+			else{ 
+				status = "true";
+				statusMessage = "Forfatteren ble endret"; 
+			}
 		});
 	}
 
 	else{
-		res.send('Du må logge inn!');
+		statusMessage = 'Du må logge inn!';
 	}
+	
+	while(statusMessage === undefined) {
+    	require('deasync').sleep(100);
+  	}
+
+	res.set('Content-Type', 'text/xml');
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	xmlFile += '<response>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '<message>' + statusMessage + '</message>';
+	xmlFile += '</response>';
+	res.send(xmlFile);	
 });
 
 app.delete('/forfatter/:forfatterId',function (req,res) {
 	if(validSession(req.cookies.FortuneCookie)){
 		var FiD = req.body.forfatter.forfatterID[0];
+		status = "false";
+		statusMessage = undefined;
+		
 		db.run('DELETE FROM forfatter WHERE (forfatterID = ?)', [FiD], function(err){
 			if (err) {
-	    			res.send("UUUPS noe gikk galt!");
-				return console.error(err.message);
+	    		statusMessage = "UUUPS noe gikk galt!";
+				console.error(err.message);
 	  		}
+
 			if (this.changes != 1){
-				res.send("Noe gikk galt!");
+				statusMessage = "Forfatteren ble IKKE slettet!";
 			}
-			else
-				res.send("Forfatteren ble slettet");
+
+			else{
+				statusMessage = "Forfatteren ble slettet";
+				status = "true";
+			}
 		});
 	}
 
 	else{
-		res.send('Du må logge inn!');
+		statusMessage = 'Du må logge inn!';
 	}
+	
+	while(statusMessage === undefined) {
+    	require('deasync').sleep(100);
+  	}
+  	
+	res.set('Content-Type', 'text/xml');
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	xmlFile += '<response>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '<message>' + statusMessage + '</message>';
+	xmlFile += '</response>';
+	res.send(xmlFile);
 });
 
 
 app.delete('/forfatter',function (req,res) {
 	if(validSession(req.cookies.FortuneCookie)){
+		status = "false";
+		statusMessage = undefined;
+		
 		db.run(`DELETE FROM forfatter`, function(err){
 			if (err) {
-	    			res.send("UUUPS noe gikk galt!");
-				return console.error(err.message);
+	    		statusMessage = "UUUPS noe gikk galt!";
+				console.error(err.message);
 	  		}
+			
 			if (this.changes == 0){
-				res.send("Tabellen er allerede tom");
+				statusMessage = "Tabellen er allerede tom";
 			}
-			else
-				res.send("Alle forfattere ble slettet");
+			
+			else{
+				statusMessage = "Alle forfattere ble slettet";
+				status = "true";
+			}
 		});
 	}
 
 	else{
-		res.send('Du må logge inn!');
+		statusMessage = 'Du må logge inn!';
 	}
+
+	while(statusMessage === undefined) {
+    	require('deasync').sleep(100);
+  	}
+
+	res.set('Content-Type', 'text/xml');
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	xmlFile += '<response>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '<message>' + statusMessage + '</message>';
+	xmlFile += '</response>';
+	res.send(xmlFile);	
 });
 
 
@@ -369,19 +460,38 @@ app.post('/bok/:bokId', function (req,res) {
 		var BiD = req.body.bok.bokID[0];
 		var tittel = req.body.bok.tittel[0];
 		var FiD = req.body.bok.forfatterID[0];
+		status = "false";
+		statusMessage = undefined;
 
 		db.run('INSERT INTO bok VALUES (?,?,?)', [BiD, tittel, FiD], function(err){
 			if (err){
-	    			res.send("UUUPS noe gikk galt!");
-				return console.error(err.message);
+	    		statusMessage = "BokId er allerede i bruk";
+				console.error(err.message);
 			}
-			else
-				res.send("Boken ble lagt til");
+
+			else{
+				statusMessage = "Boken ble lagt til";
+				status = "true";
+			}
 		});
 	}
+	
 	else{
-		res.send('Du må logge inn!');
+		statusMessage = 'Du må logge inn!';
 	}
+
+	while(statusMessage === undefined) {
+    	require('deasync').sleep(100);
+  	}
+
+	res.set('Content-Type', 'text/xml');
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	xmlFile += '<response>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '<message>' + statusMessage + '</message>';
+	xmlFile += '</response>';
+	res.send(xmlFile);
+	
 });
 
 app.put('/bok/:bokId',function (req,res) {
@@ -389,6 +499,9 @@ app.put('/bok/:bokId',function (req,res) {
 		var BiD = req.body.bok.bokID[0];
 		var tittel = req.body.bok.tittel[0];
 		var FiD = req.body.bok.forfatterID[0];
+		status = "false";
+		statusMessage = undefined;
+
 		let data = [tittel, FiD, BiD]
 		let sql = `UPDATE bok
 			   SET tittel = ?, forfatterID = ?
@@ -396,63 +509,113 @@ app.put('/bok/:bokId',function (req,res) {
 		
 		db.run(sql, data, function(err) {
 	  		if (err) {
-	    			res.send("UUUPS noe gikk galt!");
-				return console.error(err.message);
+	    		statusMessage = "UUUPS noe gikk galt!";
+				console.error(err.message);
 	  		}
 
 			if (this.changes != 1){
-				res.send("Boken finnes ikke i databasen!");
-				return;
+				statusMessage = "Boken finnes ikke i databasen!";
+				
 			}
 			else 
-				res.send("Boken ble endret"); 
+				statusMessage = "Boken ble endret";
+				status = "true"; 
 		});
 	}
 
 	else{
-		res.send('Du må logge inn!');
+		statusMessage = 'Du må logge inn!';
 	}
+
+	while(statusMessage === undefined) {
+    	require('deasync').sleep(100);
+  	}
+  	
+  	console.log("etter" + status + ", " + statusMessage);
+	res.set('Content-Type', 'text/xml');
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	xmlFile += '<response>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '<message>' + statusMessage + '</message>';
+	xmlFile += '</response>';
+	res.send(xmlFile);
 });
 
 app.delete('/bok/:bokId',function (req,res) {
 	if(validSession(req.cookies.FortuneCookie)){
 		var BiD = req.body.bok.bokID[0];
+		status = "false";
+		statusMessage = undefined;
 		db.run('DELETE FROM bok WHERE (bokID = ?)', [BiD], function(err){
+			
 			if (err) {
-	    			res.send("UUUPS noe gikk galt!");
-				return console.error(err.message);
+	    		statusMessage = "UUUPS noe gikk galt!";
+				console.error(err.message);
 	  		}
+			
 			if (this.changes != 1){
-				res.send("Noe gikk galt!");
+				statusMessage = "Noe gikk galt!";
 			}
+			
 			else
-				res.send("Boken ble slettet");
+				statusMessage = "Boken ble slettet";
+				status = "true";
 		});
 	}
 
 	else{
-		res.send('Du må logge inn!');
+		statusMessage = 'Du må logge inn!';
 	}
+
+	while(statusMessage === undefined) {
+    	require('deasync').sleep(100);
+	}
+
+	res.set('Content-Type', 'text/xml');
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	xmlFile += '<response>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '<message>' + statusMessage + '</message>';
+	xmlFile += '</response>';
+	res.send(xmlFile);
 });
 
 app.delete('/bok',function (req,res) {
 	if(validSession(req.cookies.FortuneCookie)){
+		status = "false";
+		statusMessage = undefined;
+
 		db.run('DELETE FROM bok', function(err){
 			if (err) {
-	    			res.send("UUUPS noe gikk galt!");
-				return console.error(err.message);
+	    		statusMessage = "UUUPS noe gikk galt!";
+				console.error(err.message);
 	  		}
+
 			if (this.changes == 0){
-				res.send("Tabellen er allerede tom");
+				statusMessage = "Tabellen er allerede tom";
 			}
+			
 			else
-				res.send("Alle ble slettet");
+				statusMessage = "Alle ble slettet";
+				status = "true";
 		});
 	}
 
 	else{
-		res.send('Du må logge inn!');
+		statusMessage = 'Du må logge inn!';
 	}
+
+	while(statusMessage === undefined) {
+    	require('deasync').sleep(100);
+	}
+
+	res.set('Content-Type', 'text/xml');
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	xmlFile += '<response>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '<message>' + statusMessage + '</message>';
+	xmlFile += '</response>';
+	res.send(xmlFile);
 });
 
 //sjekker sessionID
@@ -463,7 +626,6 @@ function validSession(sessionID) {
     				return console.error(err.message);
   			}
 
-			//console.log('Row.ID:' + row.ID + 'sessionID' + sessionID +"noe");
 			if(row == undefined){
 			console.log('ingen matchende sessionID i databasen');
 			x = false;
