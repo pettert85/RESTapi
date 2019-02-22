@@ -42,7 +42,7 @@ app.use(cors(corsOptions));
 app.get('/forfatter/',function (req,res) {
 	res.set('Content-Type', 'text/xml');
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
-	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/forfatter.dtd">'
+	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/forfatterliste.dtd">'
 
     	xmlFile += '<forfatterliste>';
 	var done = 0;
@@ -123,7 +123,7 @@ app.get('/bok/',function (req,res) {
 	res.set('Content-Type', 'text/xml');
     var done = 0;	
     var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
-		xmlFile += '<!DOCTYPE note SYSTEM "http://bp/bok.dtd">'
+		xmlFile += '<!DOCTYPE note SYSTEM "http://bp/bokliste.dtd">'
     	xmlFile += '<bokliste>';
 	
 
@@ -182,6 +182,7 @@ app.get('/bok/:bokId',function (req,res) {
            		 });
 		done = 1;
 		});
+
 		while(!done) {
         		node.loop();
         	}
@@ -210,12 +211,7 @@ app.post('/login/',function (req,res) {
 	   		statusMessage = "Feil brukernavn";
 	   		console.log("Feil brukernavn");
 	   		res.set('Content-Type', 'text/xml');
-			
-			var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-			xmlFile += '<response>';
-			xmlFile += '<status>' + status + '</status>';
-			xmlFile += '<message>' + statusMessage + '</message>';
-			xmlFile += '</response>';
+			var xmlFile = buildResponseXml(status,statusMessage);
 			res.send(xmlFile);
 	   		return;
 	   	}
@@ -256,11 +252,8 @@ app.post('/login/',function (req,res) {
   	}
  
 	res.set('Content-Type', 'text/xml');
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-	xmlFile += '<response>';
-	xmlFile += '<status>' + status + '</status>';
-	xmlFile += '<message>' + statusMessage + '</message>';
-	xmlFile += '</response>';
+	var xmlFile = buildResponseXml(status,statusMessage);
+
 	res.send(xmlFile);
 });
 
@@ -289,13 +282,14 @@ app.get('/logout/',function (req,res){
 });
 
 app.post('/forfatter/:forfatterId',function (req,res) {
+	status = "false";
+	statusMessage = undefined;
+
 	if(validSession(req.cookies.FortuneCookie)){
 		var FiD = req.body.forfatter.forfatterID[0];
 		var fnavn = req.body.forfatter.fornavn[0];
 		var enavn = req.body.forfatter.etternavn[0];
 		var nat = req.body.forfatter.nasjonalitet[0];
-		status = "false";
-		statusMessage = undefined;
 		
 		db.run('INSERT INTO forfatter VALUES (?,?,?,?)', [FiD, fnavn, enavn, nat], function(err){
 			if (err){
@@ -305,7 +299,6 @@ app.post('/forfatter/:forfatterId',function (req,res) {
 			else{
 				statusMessage = "Forfatter ble lagt til";
 				status = "true";
-				console.log("first" + status + ", " + statusMessage);
 			}
 		});
 
@@ -313,17 +306,12 @@ app.post('/forfatter/:forfatterId',function (req,res) {
 	else{
 		statusMessage = 'Du må logge inn!';
 	}
-	console.log("Foran: " + status + ", " + statusMessage);
 	while(statusMessage === undefined) {
     			require('deasync').sleep(100);
   		}
-  	console.log("etter" + status + ", " + statusMessage);
 	res.set('Content-Type', 'text/xml');
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-	xmlFile += '<response>';
-	xmlFile += '<status>' + status + '</status>';
-	xmlFile += '<message>' + statusMessage + '</message>';
-	xmlFile += '</response>';
+	var xmlFile = buildResponseXml(status,statusMessage);
+
 	res.send(xmlFile);	
 });
 
@@ -366,11 +354,8 @@ app.put('/forfatter/:forfatterId',function (req,res) {
   	}
 
 	res.set('Content-Type', 'text/xml');
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-	xmlFile += '<response>';
-	xmlFile += '<status>' + status + '</status>';
-	xmlFile += '<message>' + statusMessage + '</message>';
-	xmlFile += '</response>';
+	var xmlFile = buildResponseXml(status,statusMessage);
+
 	res.send(xmlFile);	
 });
 
@@ -406,11 +391,8 @@ app.delete('/forfatter/:forfatterId',function (req,res) {
   	}
   	
 	res.set('Content-Type', 'text/xml');
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-	xmlFile += '<response>';
-	xmlFile += '<status>' + status + '</status>';
-	xmlFile += '<message>' + statusMessage + '</message>';
-	xmlFile += '</response>';
+	var xmlFile = buildResponseXml(status,statusMessage);
+
 	res.send(xmlFile);
 });
 
@@ -446,11 +428,8 @@ app.delete('/forfatter',function (req,res) {
   	}
 
 	res.set('Content-Type', 'text/xml');
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-	xmlFile += '<response>';
-	xmlFile += '<status>' + status + '</status>';
-	xmlFile += '<message>' + statusMessage + '</message>';
-	xmlFile += '</response>';
+	var xmlFile = buildResponseXml(status,statusMessage);
+
 	res.send(xmlFile);	
 });
 
@@ -485,11 +464,8 @@ app.post('/bok/:bokId', function (req,res) {
   	}
 
 	res.set('Content-Type', 'text/xml');
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-	xmlFile += '<response>';
-	xmlFile += '<status>' + status + '</status>';
-	xmlFile += '<message>' + statusMessage + '</message>';
-	xmlFile += '</response>';
+	var xmlFile = buildResponseXml(status,statusMessage);
+
 	res.send(xmlFile);
 	
 });
@@ -530,14 +506,10 @@ app.put('/bok/:bokId',function (req,res) {
 	while(statusMessage === undefined) {
     	require('deasync').sleep(100);
   	}
-  	
-  	console.log("etter" + status + ", " + statusMessage);
+
 	res.set('Content-Type', 'text/xml');
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-	xmlFile += '<response>';
-	xmlFile += '<status>' + status + '</status>';
-	xmlFile += '<message>' + statusMessage + '</message>';
-	xmlFile += '</response>';
+	var xmlFile = buildResponseXml(status,statusMessage);
+
 	res.send(xmlFile);
 });
 
@@ -572,11 +544,8 @@ app.delete('/bok/:bokId',function (req,res) {
 	}
 
 	res.set('Content-Type', 'text/xml');
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-	xmlFile += '<response>';
-	xmlFile += '<status>' + status + '</status>';
-	xmlFile += '<message>' + statusMessage + '</message>';
-	xmlFile += '</response>';
+	var xmlFile = buildResponseXml(status,statusMessage);
+
 	res.send(xmlFile);
 });
 
@@ -610,11 +579,8 @@ app.delete('/bok',function (req,res) {
 	}
 
 	res.set('Content-Type', 'text/xml');
-	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
-	xmlFile += '<response>';
-	xmlFile += '<status>' + status + '</status>';
-	xmlFile += '<message>' + statusMessage + '</message>';
-	xmlFile += '</response>';
+	var xmlFile = buildResponseXml(status,statusMessage);
+	
 	res.send(xmlFile);
 });
 
@@ -649,6 +615,17 @@ function validSession(sessionID) {
   		}
 
 		return x;
+}
+
+function buildResponseXml(status,statusMessage){
+	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
+	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/response.dtd">';	
+	xmlFile += '<response>';
+	xmlFile += '<status>' + status + '</status>';
+	xmlFile += '<message>' + statusMessage + '</message>';
+	xmlFile += '</response>';
+
+	return xmlFile;
 }
 
 
