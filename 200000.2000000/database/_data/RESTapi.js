@@ -12,6 +12,8 @@ const port = 8888;
 var node = require("deasync");
 var bodyParser = require("body-parser");
 require('body-parser-xml')(bodyParser); 
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 app.use(bodyParser.xml());
 app.use(cookieParser());
 node.loop = node.runLoopOnce;
@@ -157,7 +159,6 @@ app.get('/bok/',function (req,res) {
 
 app.get('/bok/:bokId',function (req,res) {
 	var Id = req.param('bokId');
-	console.log('Bok id: ' + Id);
 	res.set('Content-Type', 'text/xml');
     	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';
 	xmlFile += '<!DOCTYPE note SYSTEM "http://bp/bok.dtd">'
@@ -224,10 +225,15 @@ app.post('/login/',function (req,res) {
 			hash = row.hash;
 
 			//fjerne tomme linjer 
-			hash = hash.trim();
 			pass = pass.trim();
+			hash = hash.trim();
+			
+			bcrypt.compare(pass, hash, function(err, check) {
+				if (err){
+					return console.error(err.message);
+				}
 
-			if ( (pass.valueOf() == hash.valueOf()) ){
+				if (check){
 				statusMessage="Logg inn vellykket"
 				status = "true";
 				//set sessionID og responder med cookie
@@ -245,9 +251,16 @@ app.post('/login/',function (req,res) {
 				
 			res.append('Set-Cookie', 'FortuneCookie='+sessionID+'; Path=/; HttpOnly');
 			}
+
 			else{
 				statusMessage = "Feil passord!";
+				console.log("Feil passord!");
 			}			
+				
+
+			});
+
+			
 		}
 	});
 	
@@ -283,7 +296,7 @@ app.get('/logout/',function (req,res){
 	}
 	
 	else{
-		console.log("Ikke inlogget");
+		console.log("Ikke innlogget");
 	}
 	res.send();
 });
@@ -305,19 +318,19 @@ app.post('/forfatter/:forfatterId',function (req,res) {
 			else{
 				statusMessage = "Forfatter ble lagt til";
 				status = "true";
-				console.log("first" + status + ", " + statusMessage);
 			}
 		});
 
 	}
+	
 	else{
 		statusMessage = 'Du må logge inn!';
 	}
-	console.log("Foran: " + status + ", " + statusMessage);
+
 	while(statusMessage === undefined) {
     			require('deasync').sleep(100);
-  		}
-  	console.log("etter" + status + ", " + statusMessage);
+  	}
+
 	res.set('Content-Type', 'text/xml');
 	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
 	xmlFile += '<response>';
@@ -531,7 +544,6 @@ app.put('/bok/:bokId',function (req,res) {
     	require('deasync').sleep(100);
   	}
   	
-  	console.log("etter" + status + ", " + statusMessage);
 	res.set('Content-Type', 'text/xml');
 	var xmlFile = '<?xml version="1.0" encoding="UTF-8"?>';	
 	xmlFile += '<response>';
