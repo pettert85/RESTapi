@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+
+<html>
+<head><title>Ajax</title>
+<link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+
+<body>
+
+<h1 id="overskrift">Velkommen</h1>
+
+<form onsubmit="login(bruker.value,pass.value); this.reset(); return false;">
+<table width="100%">
+	<tr>
+		<td align="right">Brukernavn:</td>
+		<td align="right" width="30px">
+    <input type"text" name="bruker" width="30px"></td>
+
+	<tr>
+		<td align="right">Passord:</td>
+		<td align="right width="30px""><input type="password" name="pass" width="30px"></td>
+	</tr>
+
+	<tr>
+		<td align="right">&nbsp;</td>
+		<td align="right width="30px">
+    <input type="submit" value="Login">
+		<button type="button" onclick="logout()">Logout</button>
+    <div id="loginstatus"></td>
+	</tr>
+</table></form>
+
+<table cellspacing="20" width="100%">
+	<tr>
+		<td>
+			Hent forfatter med spesifikk ID, eller tom for alle: 
+      <form name="getAuthor" onsubmit="author(forfatterID.value); this.reset(); return false;">
+			<input type="text" placeholder="ID" name="forfatterID">
+      <input type="submit" value="Hent">
+    			</form></td>
+		<td>
+			Hent en bok med spesifikk id eller tom for alle:
+      <form onsubmit="book(bokID.value); this.reset(); return false;">
+			<input type="text" placeholder="ID" name="bokID">
+			<input type="submit" value="Hent">
+			</form></td></tr>
+<tr>
+		<td>
+			 Legg til/endre/slett forfatter:
+      <form name="alterAuthors">
+			<input type="text" placeholder="ID" name="forfatterID">
+			<input type="text" placeholder="Fornavn" name="fornavn">
+			<input type="text" placeholder="Etternavn" name="etternavn">
+			<input type="text" placeholder="NOR" name="nasjonalitet">
+			<button type="button" onclick="postAuthor(forfatterID.value, fornavn.value, etternavn.value, nasjonalitet.value); alterAuthors.reset();">Legg til</button>
+			<button type="button" onclick="putAuthor(forfatterID.value, fornavn.value, etternavn.value, nasjonalitet.value);  alterAuthors.reset();">Endre</button>
+			<button type="button" onclick="deleteOneAuthor(forfatterID.value, fornavn.value, etternavn.value, nasjonalitet.value);  alterAuthors.reset();">Slett</button>
+			<button type="button" onclick="deleteAllAuthors(); alterAuthors.reset();">Slett alle</button>
+			</form></td>
+<td>
+			Legg til/endre/slett bok: 
+      <form name="alterBooks">
+			<input type="text" placeholder="BokID" name="bokID">
+			<input type="text" placeholder="Tittel" name="tittel">
+			<input type="text" placeholder="ForfatterID" name="forfatterID">
+			<button type="button" onclick="postBook(bokID.value, tittel.value, forfatterID.value); alterBooks.reset();">Legg til</button>
+			<button type="button" onclick="putBook(bokID.value, tittel.value, forfatterID.value); alterBooks.reset();">Endre</button>		
+			<button type="button" onclick="deleteOneBook(bokID.value, tittel.value, forfatterID.value); alterBooks.reset();">Slett</button>
+			<button type="button" onclick="deleteAllBooks(); alterBooks.reset();">Slett alle</button>
+</form></td></tr>
+<tr>
+	<td valign="top"><table id="forfatter" width="100%"></table>
+    <div id="responseAuthor"></td>
+	<td valign="top"><table id="bok" width="100%"></table>
+  <div id="responseBook"></td></tr></table>
+
+
+<!-- Ajax functions -->
+<!-- En eller alle forfattere -->
+<script>
+function author(forfatterID) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      authorTable(this);
+      
+    }
+  };
+  xhttp.open("GET", "/forfatter/" + forfatterID, true);
+  xhttp.send();
+}
+
+function authorTable(xml) {
+  var i;
+  var xmlDoc = xml.responseXML;
+  var table="<tr><th>ForfatterID</th><th>Fornavn</th><th>Etternavn</th><th>Najonalitet</th></tr>";
+  var x = xmlDoc.getElementsByTagName("forfatter");
+  for (i = 0; i <x.length; i++) { 
+    table += "<tr><td>" +
+    x[i].getElementsByTagName("forfatterid")[0].childNodes[0].nodeValue +
+    "</td><td>" +
+    x[i].getElementsByTagName("fornavn")[0].childNodes[0].nodeValue +
+    "</td><td>" +
+    x[i].getElementsByTagName("etternavn")[0].childNodes[0].nodeValue +
+    "</td><td>" +
+    x[i].getElementsByTagName("nasjonalitet")[0].childNodes[0].nodeValue +
+    "</td></tr>";
+  }	
+  document.getElementById("forfatter").innerHTML = table;
+}
+</script>
+
+<!-- Legg til forfatter -->
+<script>
+function postAuthor(fId, fNavn, eNavn, nasjonalitet){
+  var sendXml;
+  sendXml = "<?xml version=1.0 encoding=UTF-8?>" +
+  "<!DOCTYPE note SYSTEM \"http://bp/forfatter.dtd\">" +
+  "<forfatter><forfatterID>"+fId+
+  "</forfatterID><fornavn>"+fNavn+
+  "</fornavn><etternavn>"+eNavn+
+  "</etternavn><nasjonalitet>"+nasjonalitet+"</nasjonalitet></forfatter>";
+  var xhttp = new XMLHttpRequest();
+  
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("responseAuthor").innerHTML = responseHandler(this);
+      author("");
+      setTimeout(clearResponseAuthor, 3000);
+
+    }
+  };
+  
+  xhttp.open("POST", "/forfatter/" + fId, true);
+  xhttp.setRequestHeader('Content-type', 'text/xml');
+  xhttp.withCredentials = true;
+  xhttp.send(sendXml);	
+}
+</script>
+
+<!-- Endre forfatter -->
+<script>
+function putAuthor(fId, fNavn, eNavn, nasjonalitet){
+  var sendXml = "<?xml version=1.0 encoding=UTF-8?>" +
+  "<!DOCTYPE note SYSTEM \"http://bp/forfatter.dtd\">" +
+  "<forfatter><forfatterID>"+fId+
+  "</forfatterID><fornavn>"+fNavn+
+  "</fornavn><etternavn>"+eNavn+
+  "</etternavn><nasjonalitet>"+nasjonalitet+"</nasjonalitet></forfatter>";
+  var xhttp = new XMLHttpRequest();
+  
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("responseAuthor").innerHTML = responseHandler(this);
+      author("");
+      setTimeout(clearResponseAuthor, 3000);
+    }
+ };
+ 
+ xhttp.open("PUT", "/forfatter/" + fId, true);
+ xhttp.setRequestHeader('Content-type', 'text/xml');
+ xhttp.withCredentials = true;
+ xhttp.send(sendXml);	
+}
+</script>
+
+
+<!-- Slette en forfatter -->
+<script>
+function deleteOneAuthor(fId, fNavn, eNavn, nasjonalitet){
+ var sendXml = "<?xml version=1.0 encoding=UTF-8?>" +
+"<!DOCTYPE note SYSTEM \"http://bp/forfatter.dtd\">" +
+ "<forfatter><forfatterID>"+fId+
+ "</forfatterID><fornavn>"+fNavn+
+ "</fornavn><etternavn>"+eNavn+
+ "</etternavn><nasjonalitet>"+nasjonalitet+"</nasjonalitet></forfatter>";
+ var xhttp = new XMLHttpRequest();
+ xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("responseAuthor").innerHTML = responseHandler(this);
+      author("");
+      setTimeout(clearResponseAuthor, 3000);
+    }
+ };
+ xhttp.open("DELETE", "/forfatter/" + fId, true);
+ xhttp.setRequestHeader('Content-type', 'text/xml');
+ xhttp.withCredentials = true;
+ xhttp.send(sendXml);	
+}
+</script>
+
+<!-- Slette alle forfattere -->
+<script>
+function deleteAllAuthors(){
+ var xhttp = new XMLHttpRequest();
+ xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("responseAuthor").innerHTML = responseHandler(this);
+      author("");
+      setTimeout(clearResponseAuthor, 3000);
+    }
+ };
+
+ xhttp.open("DELETE", "/forfatter", true);
+ xhttp.setRequestHeader('Content-type', 'text/xml');
+ xhttp.withCredentials = true;
+ xhttp.send();	
+}
+
+</script>
+
+<!-- En eller alle boker -->
+<script>
+function book(bokID) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      bookTable(this);
+    }
+  };
+  xhttp.open("GET", "/bok/" + bokID, true);
+  xhttp.send();
+}
+function bookTable(xml) {
+  var i;
+  var xmlDoc = xml.responseXML;
+  var table="<tr><th>BokId</th><th>Tittel</th><th>ForfatterId</th>";
+  var x = xmlDoc.getElementsByTagName("bok");
+  for (i = 0; i <x.length; i++) { 
+    table += "<tr><td>" +
+    x[i].getElementsByTagName("bokid")[0].childNodes[0].nodeValue +
+    "</td><td>" +
+    x[i].getElementsByTagName("tittel")[0].childNodes[0].nodeValue +
+    "</td><td>" +
+    x[i].getElementsByTagName("forfatterid")[0].childNodes[0].nodeValue +
+    "</td></tr>";
+  }	
+  document.getElementById("bok").innerHTML = table;
+}
+</script>
+
+<!-- Legg til bok -->
+<script>
+function postBook(bId, tittel, fId){
+ var sendXml = "<?xml version=1.0 encoding=UTF-8?>" +
+"<!DOCTYPE note SYSTEM \"http://bp/bok.dtd\">" +
+ "<bok><bokID>"+bId+
+ "</bokID><tittel>"+tittel+
+ "</tittel><forfatterID>"+fId+"</forfatterID>></bok>";
+ var xhttp = new XMLHttpRequest();
+ xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("responseBook").innerHTML = responseHandler(this);
+      book("");
+      setTimeout(clearResponseBook, 3000);
+    }
+ };
+ xhttp.open("POST", "/bok/" + bId, true);
+ xhttp.setRequestHeader('Content-type', 'text/xml');
+ xhttp.withCredentials = true;
+ xhttp.send(sendXml);	
+}
+</script>
+
+<!-- Endre bok -->
+<script>
+function putBook(bId, tittel, fId){
+ var sendXml = "<?xml version=1.0 encoding=UTF-8?>" +
+ "<!DOCTYPE note SYSTEM \"http://bp/bok.dtd\">" +
+ "<bok><bokID>"+bId+
+ "</bokID><tittel>"+tittel+
+ "</tittel><forfatterID>"+fId+"</forfatterID>></bok>";
+ var xhttp = new XMLHttpRequest();
+ xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("responseBook").innerHTML = responseHandler(this);
+      book("");
+      setTimeout(clearResponseBook, 3000);
+    }
+ };
+ xhttp.open("PUT", "/bok/" + bId, true);
+ xhttp.setRequestHeader('Content-type', 'text/xml');
+ xhttp.withCredentials = true;
+ xhttp.send(sendXml);	
+}
+</script>
+
+<!-- Slette en bok -->
+<script>
+function deleteOneBook(bId, tittel, fId){
+ var sendXml = "<?xml version=1.0 encoding=UTF-8?>"+
+ "<!DOCTYPE note SYSTEM \"http://bp/bok.dtd\">" +
+ "<bok><bokID>"+bId+
+ "</bokID><tittel>"+tittel+
+ "</tittel><forfatterID>"+fId+"</forfatterID>></bok>";
+ var xhttp = new XMLHttpRequest();
+ xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("responseBook").innerHTML = responseHandler(this);
+      book("");
+      setTimeout(clearResponseBook, 3000);
+    }
+ };
+ xhttp.open("DELETE", "/bok/" + bId, true);
+ xhttp.setRequestHeader('Content-type', 'text/xml');
+ xhttp.withCredentials = true;
+ xhttp.send(sendXml);	
+}
+</script>
+
+<!-- Slett alle boker -->
+<script>
+function deleteAllBooks(){
+ var xhttp = new XMLHttpRequest();
+ xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("responseBook").innerHTML = responseHandler(this);
+      book("");
+      setTimeout(clearResponseBook, 3000);
+    }
+ };
+ xhttp.open("DELETE", "/bok", true);
+ xhttp.setRequestHeader('Content-type', 'text/xml');
+ xhttp.withCredentials = true;
+ xhttp.send();	
+}
+</script>
+
+
+<!-- LOGIN -->
+<script>
+
+function login(bNavn, pass) {
+  var xml =  "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+  "<!DOCTYPE note SYSTEM \"http://bp/login.dtd\">" +
+  "<login><brukernavn>"+bNavn+"</brukernavn><passord>"+pass+"</passord></login>";
+
+  var xhttp = new XMLHttpRequest();
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      logon(this,bNavn);
+    }
+  };
+  
+  xhttp.open("POST", "/login/", true);
+  xhttp.setRequestHeader('Content-type', 'text/xml');
+  xhttp.withCredentials = true; // in order to pass cookies
+  xhttp.send(xml);
+}
+
+function logon(xml,bNavn) {
+  var xmlDoc = xml.responseXML;
+  var x = xmlDoc.getElementsByTagName("response");
+  var status =x[0].getElementsByTagName("status")[0].childNodes[0].nodeValue;
+  console.log(status);
+
+  if (status == "true"){
+    var fulltNavn = Android.sendData(bNavn);
+    document.getElementById("overskrift").innerHTML = "Velkommen " + fulltNavn;
+  }
+  
+  else{
+    console.log(x[0].getElementsByTagName("message")[0].childNodes[0].nodeValue);
+    document.getElementById("loginstatus").innerHTML = x[0].getElementsByTagName("message")[0].childNodes[0].nodeValue;
+    setTimeout(functionToDisappearInnerHTML, 5000); //Sets a timer that clears
+  }
+
+}
+
+function logout(){
+  var xhttp = new XMLHttpRequest();
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("overskrift").innerHTML = "Logget av!";
+    }
+  };
+  
+  xhttp.open("GET", "/logout/", true);
+  xhttp.setRequestHeader('Content-type', 'text/xml');
+  xhttp.withCredentials = true; // in order to pass cookies
+  xhttp.send(null);
+}
+
+function clearLoginStatus() {
+  document.getElementById("loginstatus").innerHTML = ""; //Clears the innerHTML
+}
+
+function clearResponseAuthor(){
+  document.getElementById("responseAuthor").innerHTML = ""; //Clears the innerHTML
+}
+
+function clearResponseBook(){
+  document.getElementById("responseBook").innerHTML = ""; //Clears the innerHTML
+}
+
+function responseHandler(resp){
+  var xmlDoc = resp.responseXML;
+  var x = xmlDoc.getElementsByTagName("response");
+  //var status = x[0].getElementsByTagName("status")[0].childNodes[0].nodeValue;
+  var statusMessage = x[0].getElementsByTagName("message")[0].childNodes[0].nodeValue;
+
+  return statusMessage;
+}
+</script>
+
+
+</body>
+</html>	
